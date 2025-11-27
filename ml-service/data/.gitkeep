@@ -1,0 +1,5 @@
+# This folder contains training data files (CSV)
+# Files are not tracked in git due to size
+# Required files:
+# - behavioral_patterns.csv (поведенческие паттерны клиентов)
+# - transactions.csv (транзакции в Мобильном интернет Банкинге)

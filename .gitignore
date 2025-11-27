@@ -1,0 +1,75 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Testing
+coverage/
+
+# Next.js
+.next/
+out/
+build/
+dist/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+.venv/
+env/
+*.egg-info/
+ml-service/.venv/
+
+# ML Models (trained models - large files)
+ml-service/models/*.pkl
+ml-service/models/*.joblib
+ml-service/models/*.h5
+ml-service/models/mlruns/
+
+# Data files (large CSV/PDF)
+*.csv
+*.pdf
+!ml-service/data/.gitkeep
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+ml-service/.env
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.log
+
+# OS
+.DS_Store
+*.pem
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Prisma
+prisma/migrations/
+
+# Claude Code
+.claude/
+
+# Temp folders
+GREKdev/
+
+# Debug/test files
+debug-*.js
+test-*.js
+project_tender_api.json

@@ -1,0 +1,14 @@
+# Forte.AI Grafana Dashboard Provisioning
+
+apiVersion: 1
+
+providers:
+  - name: 'Forte.AI Dashboards'
+    orgId: 1
+    folder: 'Forte.AI'
+    folderUid: 'forte-ai'
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    options:
+      path: /var/lib/grafana/dashboards

@@ -1,0 +1,440 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  password      String
+  role          UserRole  @default(ANALYST)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  sessions      Session[]
+  analystSessions AnalystSession[]
+
+  @@map("users")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  userId       String
+  expires      DateTime
+  sessionToken String   @unique
+  accessToken  String?  @unique
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model Customer {
+  id                              String        @id @default(cuid())
+  cstDimId                        BigInt        @unique @map("cst_dim_id")
+  monthlyOsChanges                Int?          @map("monthly_os_changes")
+  monthlyPhoneModelChanges        Int?          @map("monthly_phone_model_changes")
+  lastPhoneModel                  String?       @map("last_phone_model")
+  lastOs                          String?       @map("last_os")
+  loginsLast7Days                 Int?          @map("logins_last_7_days")
+  loginsLast30Days                Int?          @map("logins_last_30_days")
+  loginFrequency7d                Float?        @map("login_frequency_7d")
+  loginFrequency30d               Float?        @map("login_frequency_30d")
+  freqChange7dVsMean              Float?        @map("freq_change_7d_vs_mean")
+  logins7dOver30dRatio            Float?        @map("logins_7d_over_30d_ratio")
+  avgLoginInterval30d             Float?        @map("avg_login_interval_30d")
+  stdLoginInterval30d             Float?        @map("std_login_interval_30d")
+  varLoginInterval30d             Float?        @map("var_login_interval_30d")
+  ewmLoginInterval7d              Float?        @map("ewm_login_interval_7d")
+  burstinessLoginInterval         Float?        @map("burstiness_login_interval")
+  fanoFactorLoginInterval         Float?        @map("fano_factor_login_interval")
+  zscoreAvgLoginInterval7d        Float?        @map("zscore_avg_login_interval_7d")
+  createdAt                       DateTime      @default(now())
+  updatedAt                       DateTime      @updatedAt
+  transactions                    Transaction[]
+
+  @@index([cstDimId])
+  @@map("customers")
+}
+
+model Transaction {
+  id              String             @id @default(cuid())
+  cstDimId        BigInt             @map("cst_dim_id")
+  transDate       DateTime           @map("trans_date")
+  transDateTime   DateTime           @map("trans_datetime")
+  amount          Float
+  docNo           String             @map("doc_no")
+  direction       String
+  isFraud         Boolean            @map("is_fraud")
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  customer        Customer           @relation(fields: [cstDimId], references: [cstDimId])
+  predictions     FraudPrediction[]
+
+  @@index([cstDimId])
+  @@index([transDate])
+  @@index([isFraud])
+  @@map("transactions")
+}
+
+model FraudPrediction {
+  id                    String      @id @default(cuid())
+  transactionId         String      @map("transaction_id")
+  fraudProbability      Float       @map("fraud_probability")
+  fraudScore            Float       @map("fraud_score")
+  riskLevel             RiskLevel   @map("risk_level")
+  modelVersion          String      @map("model_version")
+  features              Json        @map("features")
+  shapValues            Json?       @map("shap_values")
+  aiAnalysis            String?     @map("ai_analysis") @db.Text
+  amlAnalysis           String?     @map("aml_analysis") @db.Text
+  recommendation        String?     @map("recommendation") @db.Text
+  analysisFingerprint   String?     @map("analysis_fingerprint")
+  blocked               Boolean     @default(false)
+  reviewedBy            String?     @map("reviewed_by")
+  reviewedAt            DateTime?   @map("reviewed_at")
+  createdAt             DateTime    @default(now())
+  transaction           Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+
+  @@index([transactionId])
+  @@index([riskLevel])
+  @@index([createdAt])
+  @@map("fraud_predictions")
+}
+
+enum UserRole {
+  ADMIN
+  ANALYST
+  VIEWER
+}
+
+enum RiskLevel {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+model Tender {
+  id          String   @id @default(cuid())
+  lotId       String   @unique @map("lot_id")
+  title       String
+  description String?  @db.Text
+  amount      Float
+  currency    String   @default("KZT")
+  status      String
+  deadline    DateTime?
+  customer    String?
+  region      String?
+  sourceLink  String?  @map("source_link")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  risks       TenderRisk[]
+  suppliers   TenderSupplier[]
+
+  @@map("tenders")
+}
+
+model TenderRisk {
+  id          String    @id @default(cuid())
+  tenderId    String    @map("tender_id")
+  riskLevel   RiskLevel @map("risk_level")
+  factors     Json
+  score       Float
+  aiAnalysis  String?   @map("ai_analysis") @db.Text
+  createdAt   DateTime  @default(now())
+  
+  tender      Tender    @relation(fields: [tenderId], references: [id], onDelete: Cascade)
+
+  @@index([tenderId])
+  @@map("tender_risks")
+}
+
+model TenderSupplier {
+  id          String   @id @default(cuid())
+  tenderId    String   @map("tender_id")
+  name        String
+  bin         String?
+  matchScore  Float    @map("match_score")
+  reason      String?  @db.Text
+  createdAt   DateTime @default(now())
+
+  tender      Tender   @relation(fields: [tenderId], references: [id], onDelete: Cascade)
+
+  @@index([tenderId])
+  @@map("tender_suppliers")
+}
+
+// AI-Scrum Master Models
+model Project {
+  id          String       @id @default(cuid())
+  name        String
+  description String?      @db.Text
+  status      ProjectStatus @default(ACTIVE)
+  startDate   DateTime?    @map("start_date")
+  endDate     DateTime?    @map("end_date")
+  createdBy   String       @map("created_by")
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  tasks       Task[]
+  teamMembers TeamMember[]
+  meetings    Meeting[]
+
+  @@map("projects")
+}
+
+model TeamMember {
+  id          String   @id @default(cuid())
+  projectId   String   @map("project_id")
+  name        String
+  email       String
+  role        String
+  createdAt   DateTime @default(now())
+
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  assignedTasks Task[] @relation("AssignedTasks")
+
+  @@index([projectId])
+  @@map("team_members")
+}
+
+model Task {
+  id            String       @id @default(cuid())
+  projectId     String       @map("project_id")
+  title         String
+  description   String?      @db.Text
+  type          TaskType     @default(TASK)
+  status        TaskStatus   @default(TODO)
+  priority      TaskPriority @default(MEDIUM)
+  assigneeId    String?      @map("assignee_id")
+  parentTaskId  String?      @map("parent_task_id")
+  estimatedHours Float?      @map("estimated_hours")
+  actualHours    Float?      @map("actual_hours")
+  dueDate       DateTime?    @map("due_date")
+  completedAt   DateTime?    @map("completed_at")
+  aiGenerated   Boolean      @default(false) @map("ai_generated")
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  project       Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  assignee      TeamMember?  @relation("AssignedTasks", fields: [assigneeId], references: [id])
+  parentTask    Task?        @relation("SubTasks", fields: [parentTaskId], references: [id])
+  subtasks      Task[]       @relation("SubTasks")
+  comments      TaskComment[]
+
+  @@index([projectId])
+  @@index([assigneeId])
+  @@index([status])
+  @@index([parentTaskId])
+  @@map("tasks")
+}
+
+model Meeting {
+  id              String       @id @default(cuid())
+  projectId       String       @map("project_id")
+  title           String
+  type            MeetingType
+  scheduledAt     DateTime     @map("scheduled_at")
+  duration        Int          // in minutes
+  meetingUrl      String?      @map("meeting_url")
+  meetingPlatform String?      @map("meeting_platform") // google_meet, teams
+  meetingId       String?      @map("meeting_id") // native meeting ID for platform
+  attendees       String?
+  vexaBotStatus   String?      @map("vexa_bot_status") // requested, active, completed, failed
+  vexaBotId       String?      @map("vexa_bot_id")
+  transcript      String?      @db.Text
+  summary         String?      @db.Text
+  keyDecisions    Json?        @map("key_decisions")
+  actionItems     Json?        @map("action_items")
+  createdBy       String       @map("created_by")
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  project     Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  notes       MeetingNote[]
+
+  @@index([projectId])
+  @@index([scheduledAt])
+  @@map("meetings")
+}
+
+model MeetingNote {
+  id          String   @id @default(cuid())
+  meetingId   String   @map("meeting_id")
+  content     String   @db.Text
+  timestamp   DateTime
+  speaker     String?
+  isDecision  Boolean  @default(false) @map("is_decision")
+  isAction    Boolean  @default(false) @map("is_action")
+  createdAt   DateTime @default(now())
+
+  meeting     Meeting  @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+
+  @@index([meetingId])
+  @@map("meeting_notes")
+}
+
+model TaskComment {
+  id          String   @id @default(cuid())
+  taskId      String   @map("task_id")
+  content     String   @db.Text
+  author      String
+  isAiGenerated Boolean @default(false) @map("is_ai_generated")
+  createdAt   DateTime @default(now())
+
+  task        Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([taskId])
+  @@map("task_comments")
+}
+
+enum ProjectStatus {
+  ACTIVE
+  ON_HOLD
+  COMPLETED
+  CANCELLED
+}
+
+enum TaskType {
+  EPIC
+  TASK
+  SUBTASK
+  BUG
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  IN_REVIEW
+  DONE
+  BLOCKED
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum MeetingType {
+  STANDUP
+  GROOMING
+  DEMO
+  RETROSPECTIVE
+  PLANNING
+}
+
+// AI Business Analyst Models
+model AnalystSession {
+  id        String             @id @default(cuid())
+  userId    String             @map("user_id")
+  title     String?
+  status    String             @default("ACTIVE") // ACTIVE, COMPLETED, ARCHIVED
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+  messages  AnalystMessage[]
+  documents AnalystDocument[]
+
+  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("analyst_sessions")
+}
+
+model AnalystMessage {
+  id        String         @id @default(cuid())
+  sessionId String         @map("session_id")
+  role      String         // user, assistant
+  content   String         @db.Text
+  createdAt DateTime       @default(now())
+
+  session   AnalystSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@map("analyst_messages")
+}
+
+model AnalystDocument {
+  id        String         @id @default(cuid())
+  sessionId String         @map("session_id")
+  title     String
+  type      DocumentType
+  content   String         @db.Text
+  createdBy String         @map("created_by")
+  createdAt DateTime       @default(now())
+
+  session   AnalystSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@index([type])
+  @@map("analyst_documents")
+}
+
+enum DocumentType {
+  BRD
+  USER_STORIES
+  USE_CASES
+}
+
+model ApiKey {
+  id        String   @id @default(cuid())
+  name      String
+  key       String   @unique
+  scopes    String[] // e.g., ["read:transactions", "write:transactions"]
+  lastUsed  DateTime? @map("last_used")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@map("api_keys")
+}
+
+model WebhookEndpoint {
+  id        String   @id @default(cuid())
+  url       String
+  events    String[] // e.g., ["fraud.detected", "transaction.created"]
+  secret    String   // for signature verification
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("webhook_endpoints")
+}
+
+model WebhookEvent {
+  id          String   @id @default(cuid())
+  endpointId  String   @map("endpoint_id")
+  event       String
+  payload     Json
+  statusCode  Int?     @map("status_code")
+  success     Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  @@map("webhook_events")
+}
+
+model VerificationSession {
+  id              String   @id @default(cuid())
+  sessionId       String   @unique @map("session_id") // from Veriffy
+  sessionToken    String   @map("session_token")
+  verificationUrl String   @map("verification_url")
+  status          String   @default("PENDING") // PENDING, APPROVED, REJECTED
+  riskLevel       String?  @map("risk_level")
+  transactionId   String?  @map("transaction_id")
+  metadata        Json?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("verification_sessions")
+}

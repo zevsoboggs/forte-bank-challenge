@@ -1,0 +1,56 @@
+# Forte.AI Alertmanager Configuration
+
+global:
+  resolve_timeout: 5m
+
+route:
+  group_by: ['alertname', 'severity']
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 12h
+  receiver: 'default-receiver'
+
+  routes:
+    # Critical alerts - immediate notification
+    - match:
+        severity: critical
+      receiver: 'critical-receiver'
+      group_wait: 10s
+      repeat_interval: 1h
+
+    # Warning alerts
+    - match:
+        severity: warning
+      receiver: 'warning-receiver'
+      group_wait: 1m
+      repeat_interval: 4h
+
+receivers:
+  - name: 'default-receiver'
+    # Webhook for custom integrations
+    webhook_configs:
+      - url: 'http://ml-service:8000/alerts/webhook'
+        send_resolved: true
+
+  - name: 'critical-receiver'
+    webhook_configs:
+      - url: 'http://ml-service:8000/alerts/webhook'
+        send_resolved: true
+    # Add Slack/PagerDuty/Email here for production
+    # slack_configs:
+    #   - api_url: 'https://hooks.slack.com/services/xxx'
+    #     channel: '#forte-alerts-critical'
+    #     send_resolved: true
+
+  - name: 'warning-receiver'
+    webhook_configs:
+      - url: 'http://ml-service:8000/alerts/webhook'
+        send_resolved: true
+
+# Inhibition rules
+inhibit_rules:
+  - source_match:
+      severity: 'critical'
+    target_match:
+      severity: 'warning'
+    equal: ['alertname']

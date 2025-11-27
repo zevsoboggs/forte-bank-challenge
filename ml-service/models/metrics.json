@@ -1,0 +1,33 @@
+{
+  "cv_scores": {
+    "lgb_auc_mean": 0.994529440580824,
+    "lgb_auc_std": 0.000850938546427989,
+    "xgb_auc_mean": 0.9972118197532982,
+    "xgb_auc_std": 0.000582057717659414,
+    "ensemble_auc_mean": 0.996260033643692,
+    "ensemble_auc_std": 0.0007534696460702184
+  },
+  "test_scores": {
+    "roc_auc": 0.9972494511268007,
+    "precision": 0.7989247311827957,
+    "recall": 0.7459839357429718,
+    "f1_score": 0.7715472481827622,
+    "f2_score": 0.756003256003256,
+    "f05_score": 0.78774385072095,
+    "optimal_threshold": 0.6710585820343289
+  },
+  "confusion_matrix": {
+    "true_negatives": 154405,
+    "false_positives": 187,
+    "false_negatives": 253,
+    "true_positives": 743
+  },
+  "data_info": {
+    "train_size": 622349,
+    "test_size": 155588,
+    "fraud_rate_train": 0.006398339195531767,
+    "fraud_rate_test": 0.006401521968275189
+  },
+  "saved_at": "2025-11-25T21:46:22.680002",
+  "model_version": "1.0.2"
+}

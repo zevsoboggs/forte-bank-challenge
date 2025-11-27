@@ -1,0 +1,86 @@
+# Forte.AI Prometheus Alerts
+
+groups:
+  - name: forte-ml-alerts
+    rules:
+      # High prediction latency
+      - alert: HighPredictionLatency
+        expr: histogram_quantile(0.99, rate(forte_prediction_latency_seconds_bucket[5m])) > 0.5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High ML prediction latency"
+          description: "99th percentile latency is {{ $value | humanizeDuration }} (threshold: 500ms)"
+
+      # High error rate
+      - alert: HighPredictionErrorRate
+        expr: rate(forte_predictions_errors_total[5m]) / (rate(forte_predictions_total[5m]) + 0.001) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High prediction error rate"
+          description: "Error rate is {{ $value | humanizePercentage }} (threshold: 5%)"
+
+      # High fraud rate (potential attack) - using blocked_transactions counter
+      - alert: HighFraudRate
+        expr: rate(forte_blocked_transactions_total[15m]) / (rate(forte_predictions_total[15m]) + 0.001) > 0.3
+        for: 15m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Unusually high fraud rate detected"
+          description: "Block rate is {{ $value | humanizePercentage }} (threshold: 30%)"
+
+      # Model drift detected
+      - alert: DataDriftDetected
+        expr: forte_drift_score > 0.5
+        for: 30m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Data drift detected"
+          description: "Drift score is {{ $value }} (threshold: 0.5). Consider model retraining."
+
+      # Service down
+      - alert: MLServiceDown
+        expr: up{job="ml-service"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "ML Service is down"
+          description: "ML Service has been unavailable for more than 1 minute"
+
+  - name: forte-infrastructure-alerts
+    rules:
+      # Kafka consumer lag
+      - alert: KafkaConsumerLag
+        expr: kafka_consumer_group_lag > 10000
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High Kafka consumer lag"
+          description: "Consumer lag is {{ $value }} messages"
+
+      # High memory usage
+      - alert: HighMemoryUsage
+        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) > 0.9
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory usage"
+          description: "Memory usage is {{ $value | humanizePercentage }}"
+
+      # Disk space low
+      - alert: DiskSpaceLow
+        expr: (1 - (node_filesystem_avail_bytes / node_filesystem_size_bytes)) > 0.85
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Low disk space"
+          description: "Disk usage is {{ $value | humanizePercentage }}"

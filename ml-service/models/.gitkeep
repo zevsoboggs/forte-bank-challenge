@@ -1,0 +1,9 @@
+# This folder contains trained ML models
+# Models are not tracked in git due to size
+# Generated files after training:
+# - lgb_model.joblib (LightGBM model)
+# - xgb_model.joblib (XGBoost model)
+# - scaler.joblib (StandardScaler)
+# - label_encoders.joblib (Label encoders)
+# - metadata.json (model metadata and threshold)
+# - metrics.json (training metrics)
